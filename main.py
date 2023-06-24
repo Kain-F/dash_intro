@@ -34,10 +34,10 @@ app.layout = html.Div([
 
 	dcc.Dropdown(id='slct_year',
 	             options=[
-		             {'label':2015,'value':2015},
-					 {'label':2016,'value':2016},
-					 {'label':2017,'value':2017},
-					 {'label':2018,'value':2018},
+		             {'label':'2015','value':2015},
+					 {'label':'2016','value':2016},
+					 {'label':'2017','value':2017},
+					 {'label':'2018','value':2018},
 	             ],
 	             multi=False,
 	             value=2015,
@@ -46,5 +46,58 @@ app.layout = html.Div([
 	html.Div(id='output_container',children=[]),
 	html.Br(),
 
-	dcc.Graph(id='bee_map',figure={})
+	dcc.Graph(id='bee_map',figure={}),
+	html.Br(),
+
+	dcc.Graph(id='bar_chart',figure={}),
 ])
+
+# ---------------------------------------------------------------------------------------------------------------------
+# the callback -- connect the plotly graphs with the dash components
+
+@app.callback(
+	[Output(component_id='output_container',component_property='children'),
+	 Output(component_id='bee_map',component_property='figure'),
+	 Output(component_id='bar_chart',component_property='figure')],
+	[Input(component_id='slct_year',component_property='value')]
+	)
+
+def update_graph(option_selectd):
+	print(option_selectd),
+	print(type(option_selectd))
+
+	container = f'The year chosen by the user was: {option_selectd}'
+
+	dff = df.copy()
+	dff = dff[dff['Year'] == option_selectd]
+	dff = dff[dff['Affected by'] == 'Varroa_mites']
+
+	print(dff.head())
+
+	map = px.choropleth(
+		data_frame=dff,
+		locationmode= 'USA-states',
+		locations='state_code',
+		scope = 'usa',
+		color='Pct of Colonies Impacted',
+		hover_data=['State','Pct of Colonies Impacted'],
+		color_continuous_scale=px.colors.sequential.YlOrRd,
+		labels={'Pct of Colonies impacted' : '% of bee colonies'},
+		template='plotly_dark'
+	)
+
+	dff_bar = dff.sort_values(by=['Pct of Colonies Impacted'],ascending=False)
+	print(dff_bar.head())
+	barchart = px.bar(data_frame= dff_bar,
+	             x='State',
+	             y='Pct of Colonies Impacted',
+	             color='Pct of Colonies Impacted',
+	             barmode='group')
+
+	return container, map, barchart
+
+# ---------------------------------------------------------------------------------------------------------------------
+# run the website
+
+if __name__ == '__main__':
+	app.run_server(debug=True)
